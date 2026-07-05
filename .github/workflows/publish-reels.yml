@@ -1,0 +1,29 @@
+name: Hirra Reels publish
+
+# Daily reel to Instagram + Facebook at 15:30 UTC (9:30 PM Bangladesh /
+# 6:30 PM Saudi / 7:30 PM UAE). run_reels.py publishes any due-but-unposted
+# reel, so a late/missed cron tick self-heals on the next run.
+on:
+  schedule:
+    - cron: '30 15 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish-reels:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish due reels (IG + FB)
+        env:
+          META_PAGE_TOKEN: ${{ secrets.META_PAGE_TOKEN }}
+        run: python3 run_reels.py
+      - name: Commit updated state
+        run: |
+          git config user.name "hirra-bot"
+          git config user.email "hirra-bot@users.noreply.github.com"
+          git add posted_reels.json
+          git diff --staged --quiet || git commit -m "state: update posted reels [skip ci]"
+          git push
