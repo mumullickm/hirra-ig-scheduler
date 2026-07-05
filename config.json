@@ -1,5 +1,6 @@
 {
   "igUserId": "17841443609771219",
   "imgBase": "https://mumullickm.github.io/hirra-campaign/outputs/campaign",
-  "videoBase": "https://mumullickm.github.io/hirra-calendar/assets/videos"
+  "videoBase": "https://mumullickm.github.io/hirra-calendar/assets/videos",
+  "staticBase": "https://mumullickm.github.io/hirra-calendar/assets/statics"
 }

@@ -1,0 +1,32 @@
+name: Hirra Statics publish
+
+# Two feed posts/day to Instagram + Facebook at 06:00 + 16:30 UTC (12:00 PM &
+# 10:30 PM Bangladesh / 9:00 AM & 7:30 PM Saudi). Statics start Jul 12 (after the
+# FLUX campaign ends Jul 11). run_statics.py posts any due-but-unposted static, so
+# a late/missed cron tick self-heals on the next run.
+on:
+  schedule:
+    - cron: '0 6 * * *'
+    - cron: '30 16 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish-statics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish due statics (IG + FB)
+        env:
+          META_PAGE_TOKEN: ${{ secrets.META_PAGE_TOKEN }}
+        run: python3 run_statics.py
+      - name: Commit updated state
+        run: |
+          git config user.name "hirra-bot"
+          git config user.email "hirra-bot@users.noreply.github.com"
+          git pull --rebase origin main || true
+          git add posted_statics.json
+          git diff --staged --quiet || git commit -m "state: update posted statics [skip ci]"
+          git push
