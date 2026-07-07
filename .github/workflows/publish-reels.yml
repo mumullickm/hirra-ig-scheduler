@@ -5,7 +5,8 @@ name: Hirra Reels publish
 # reel, so a late/missed cron tick self-heals on the next run.
 on:
   schedule:
-    - cron: '30 15 * * *'
+    - cron: '30 15 * * *'   # batch-1 reels 21:30 BD (ends 24 Jul)
+    - cron: '5 16 * * *'    # batch-2 reels 22:00 BD (from 25 Jul)
   workflow_dispatch:
 
 permissions:
