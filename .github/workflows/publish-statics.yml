@@ -9,6 +9,7 @@ on:
     - cron: '0 6 * * *'
     - cron: '30 16 * * *'   # batch-1 PM 22:30 BD (ends 10 Aug)
     - cron: '5 13 * * *'    # batch-2 evening 19:00 BD (from 11 Aug)
+    - cron: '0 14 * * *'    # showcase slot, Tue + Sat 18:00 Gulf (21 Jul - 15 Aug)
   workflow_dispatch:
 
 permissions:
