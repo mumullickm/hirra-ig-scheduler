@@ -12,14 +12,14 @@ Secret: META_PAGE_TOKEN (env)
 """
 import datetime, json, os, time, urllib.error, urllib.parse, urllib.request
 
+from caption_utils import retag
+
 GRAPH = "https://graph.facebook.com/v21.0"
 TOKEN = os.environ["META_PAGE_TOKEN"]
 CFG = json.load(open("config.json"))
 IG = CFG["igUserId"]
 VIDEO_BASE = CFG["videoBase"]
 CAPS = json.load(open("reel_captions.json"))
-DL = ("\n\nGet Hirra, free: aykizintelligence.com/hirra/get"
-      "\nحمّلي هِرّة مجانًا: aykizintelligence.com/hirra/get")
 
 
 def _get(path, params=None):
@@ -38,8 +38,13 @@ def _post(path, params):
         return {"_error": json.loads(e.read().decode()).get("error", {})}
 
 
-def video_url(reel): return f"{VIDEO_BASE}/{reel}.mp4"
-def caption_for(reel): return CAPS[reel] + DL
+# Reels are published from the 9:16 hook-first rebuild (2026-07-24 audit). The
+# variant suffix picks the language cut; the Arabic cuts ship as "-ar".
+VARIANT = CFG.get("reelVariant", "")
+
+
+def video_url(reel): return f"{VIDEO_BASE}/{reel}{VARIANT}.mp4"
+def caption_for(reel): return retag(CAPS[reel], reel)
 
 
 def publish_ig_reel(reel):
@@ -74,8 +79,21 @@ def publish_fb_reel(page_id, reel):
     fin = _post(f"{page_id}/video_reels", {"upload_phase": "finish", "video_id": vid,
                                            "video_state": "PUBLISHED",
                                            "description": caption_for(reel)})
-    ok = fin.get("success") or fin.get("post_id") or fin.get("id")
-    return bool(ok), (str(fin.get("post_id") or vid) if ok else f"FB finish error {fin.get('_error')}")
+    if not (fin.get("success") or fin.get("post_id") or fin.get("id")):
+        return False, f"FB finish error {fin.get('_error')}"
+    # "success" only means the finish call was accepted. FB transcodes and policy
+    # checks the reel afterwards with no callback, so confirm it actually went
+    # live before recording it as posted; otherwise the self-healing loop would
+    # skip a reel that never published.
+    for _ in range(10):
+        st = _get(vid, {"fields": "status,published"})
+        vs = (st.get("status") or {}).get("video_status")
+        if vs in ("ready", "processing_complete") or st.get("published"):
+            return True, str(vid)
+        if vs == "error":
+            return False, f"FB reel processing error {st.get('status')}"
+        time.sleep(15)
+    return False, "FB reel never reported ready"
 
 
 def main():

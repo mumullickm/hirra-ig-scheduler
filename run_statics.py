@@ -11,14 +11,14 @@ Secret: META_PAGE_TOKEN (env)
 """
 import datetime, json, os, time, urllib.error, urllib.parse, urllib.request
 
+from caption_utils import retag
+
 GRAPH = "https://graph.facebook.com/v21.0"
 TOKEN = os.environ["META_PAGE_TOKEN"]
 CFG = json.load(open("config.json"))
 IG = CFG["igUserId"]
 STATIC_BASE = CFG["staticBase"]
 CAPS = json.load(open("static_captions.json"))
-DL = ("\n\nGet Hirra, free: aykizintelligence.com/hirra/get"
-      "\nحمّلي هِرّة مجانًا: aykizintelligence.com/hirra/get")
 
 
 def _get(path, params=None):
@@ -38,7 +38,7 @@ def _post(path, params):
 
 
 def image_url(sid): return f"{STATIC_BASE}/{sid}.jpg"
-def caption_for(sid): return CAPS[sid] + DL
+def caption_for(sid): return retag(CAPS[sid], sid)
 
 
 def publish_ig_image(sid):

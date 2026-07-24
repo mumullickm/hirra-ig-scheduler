@@ -27,8 +27,6 @@ CFG = json.load(open("config.json"))
 IG = CFG["igUserId"]
 IMG_BASE = CFG["imgBase"]
 CAPTIONS = json.load(open("captions.json"))
-DL = ("\n\nGet Hirra, free: aykizintelligence.com/hirra/get"
-      "\nحمّلي هِرّة مجانًا: aykizintelligence.com/hirra/get\n\n")
 
 
 def _get(path, params=None):
@@ -49,7 +47,7 @@ def _post(path, params):
 
 def caption_for(no):
     c = CAPTIONS[str(no)]
-    return c["en"] + "\n\n" + c["ar"] + DL + c["tags"]
+    return retag(c["en"] + "\n\n" + c["ar"] + "\n\n" + c["tags"], str(no))
 
 
 def img_for(no):
