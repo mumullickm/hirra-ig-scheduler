@@ -55,14 +55,21 @@ def _get(path, params=None):
         return {"_error": {"message": str(e)[:120]}}
 
 
+_errs = []
+
+
 def insights(media_id, metrics):
     """Return {metric: value}. Drops unsupported metrics rather than failing."""
     r = _get(f"{media_id}/insights", {"metric": ",".join(metrics)})
     if "_error" in r:
+        _errs.append(f"{media_id} batch: {r['_error'].get('message','')[:150]}")
         # retry one metric at a time so one unsupported name does not lose the rest
         out = {}
         for m in metrics:
             one = _get(f"{media_id}/insights", {"metric": m})
+            if "_error" in one:
+                _errs.append(f"{media_id} {m}: {one['_error'].get('message','')[:150]}")
+                continue
             for row in one.get("data", []) or []:
                 vals = row.get("values") or [{}]
                 out[row["name"]] = vals[0].get("value")
@@ -114,6 +121,13 @@ def main():
     reach = [r for r in rows if r[5] == "reach" and r[1] == "ig"]
     print(f"[{now}] wrote {len(rows)} metric rows for "
           f"{len({r[3] for r in rows})} posts")
+    if _errs:
+        # Never fail silently: an empty metrics.csv looks identical to a healthy
+        # run with nothing to report, and that is how the reach problem went
+        # unnoticed for a fortnight in the first place.
+        print(f"  {len(_errs)} API errors, first few:")
+        for e in _errs[:6]:
+            print("   ", e)
     if watch:
         vals = [r[6] for r in watch if isinstance(r[6], (int, float))]
         if vals:
