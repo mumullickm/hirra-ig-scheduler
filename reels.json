@@ -1,198 +1,397 @@
 [
   {
     "reel": "v19-master",
+    "variant": "",
     "iso": "2026-07-05T15:49:25Z"
   },
   {
     "reel": "v01-p7",
+    "variant": "",
     "iso": "2026-07-06T15:30:00Z"
   },
   {
     "reel": "v10-p25",
+    "variant": "",
     "iso": "2026-07-07T15:30:00Z"
   },
   {
     "reel": "v02-p10",
+    "variant": "",
     "iso": "2026-07-08T15:30:00Z"
   },
   {
     "reel": "v11-p26",
+    "variant": "",
     "iso": "2026-07-09T15:30:00Z"
   },
   {
     "reel": "v03-p11",
+    "variant": "",
     "iso": "2026-07-10T15:30:00Z"
   },
   {
     "reel": "v12-p27",
+    "variant": "",
     "iso": "2026-07-11T15:30:00Z"
   },
   {
     "reel": "v04-p12",
+    "variant": "",
     "iso": "2026-07-12T15:30:00Z"
   },
   {
     "reel": "v13-p15",
+    "variant": "",
     "iso": "2026-07-13T15:30:00Z"
   },
   {
     "reel": "v05-p20",
+    "variant": "",
     "iso": "2026-07-14T15:30:00Z"
   },
   {
     "reel": "v14-p16",
+    "variant": "",
     "iso": "2026-07-15T15:30:00Z"
   },
   {
     "reel": "v06-p21",
+    "variant": "",
     "iso": "2026-07-16T15:30:00Z"
   },
   {
     "reel": "v15-p13",
+    "variant": "",
     "iso": "2026-07-17T15:30:00Z"
   },
   {
     "reel": "v07-p22",
+    "variant": "",
     "iso": "2026-07-18T15:30:00Z"
   },
   {
     "reel": "v16-mood-thriving",
+    "variant": "",
     "iso": "2026-07-19T15:30:00Z"
   },
   {
     "reel": "v08-p23",
+    "variant": "",
     "iso": "2026-07-20T15:30:00Z"
   },
   {
     "reel": "v17-mood-watch",
+    "variant": "",
     "iso": "2026-07-21T15:30:00Z"
   },
   {
     "reel": "v09-p24",
+    "variant": "",
     "iso": "2026-07-22T15:30:00Z"
   },
   {
     "reel": "v18-mood-needscare",
+    "variant": "",
     "iso": "2026-07-23T15:30:00Z"
   },
   {
     "reel": "v21-p30",
+    "variant": "-en",
     "iso": "2026-07-25T15:30:00Z"
   },
   {
     "reel": "v22-p31",
+    "variant": "-ar",
     "iso": "2026-07-26T15:30:00Z"
   },
   {
     "reel": "v23-p32",
+    "variant": "-en",
     "iso": "2026-07-27T15:30:00Z"
   },
   {
     "reel": "v24-p33",
+    "variant": "-ar",
     "iso": "2026-07-28T15:30:00Z"
   },
   {
     "reel": "v25-p34",
+    "variant": "-en",
     "iso": "2026-07-29T15:30:00Z"
   },
   {
     "reel": "v26-p35",
+    "variant": "-ar",
     "iso": "2026-07-30T15:30:00Z"
   },
   {
     "reel": "v27-p36",
+    "variant": "-en",
     "iso": "2026-07-31T15:30:00Z"
   },
   {
     "reel": "v28-p37",
+    "variant": "-ar",
     "iso": "2026-08-01T15:30:00Z"
   },
   {
     "reel": "v29-p38",
+    "variant": "-en",
     "iso": "2026-08-02T15:30:00Z"
   },
   {
     "reel": "v30-p39",
+    "variant": "-ar",
     "iso": "2026-08-03T15:30:00Z"
   },
   {
     "reel": "v31-p40",
+    "variant": "-en",
     "iso": "2026-08-04T15:30:00Z"
   },
   {
     "reel": "v32-p41",
+    "variant": "-ar",
     "iso": "2026-08-05T15:30:00Z"
   },
   {
     "reel": "v33-p42",
+    "variant": "-en",
     "iso": "2026-08-06T15:30:00Z"
   },
   {
     "reel": "v34-p43",
+    "variant": "-ar",
     "iso": "2026-08-07T15:30:00Z"
   },
   {
     "reel": "v35-p44",
+    "variant": "-en",
     "iso": "2026-08-08T15:30:00Z"
   },
   {
     "reel": "v36-slowblink",
+    "variant": "-ar",
     "iso": "2026-08-09T15:30:00Z"
   },
   {
     "reel": "v37-water",
+    "variant": "-en",
     "iso": "2026-08-10T15:30:00Z"
   },
   {
     "reel": "v38-2am",
+    "variant": "-ar",
     "iso": "2026-08-11T15:30:00Z"
   },
   {
     "reel": "v39-30sec",
+    "variant": "-en",
     "iso": "2026-08-12T15:30:00Z"
   },
   {
     "reel": "v40-sincewhen",
+    "variant": "-ar",
     "iso": "2026-08-13T15:30:00Z"
   },
   {
     "reel": "v41-lilies",
+    "variant": "-en",
     "iso": "2026-08-14T15:30:00Z"
   },
   {
     "reel": "v42-quietdays",
+    "variant": "-ar",
     "iso": "2026-08-15T15:30:00Z"
   },
   {
     "reel": "v43-notdiet",
+    "variant": "-en",
     "iso": "2026-08-16T15:30:00Z"
   },
   {
     "reel": "v44-breath",
+    "variant": "-ar",
     "iso": "2026-08-17T15:30:00Z"
   },
   {
     "reel": "v45-hands",
+    "variant": "-en",
     "iso": "2026-08-18T15:30:00Z"
   },
   {
     "reel": "v46-indoor",
+    "variant": "-ar",
     "iso": "2026-08-19T15:30:00Z"
   },
   {
     "reel": "v47-private",
+    "variant": "-en",
     "iso": "2026-08-20T15:30:00Z"
   },
   {
     "reel": "v48-thirdeyelid",
+    "variant": "-ar",
     "iso": "2026-08-21T15:30:00Z"
   },
   {
     "reel": "v49-overgrooming",
+    "variant": "-en",
     "iso": "2026-08-22T15:30:00Z"
   },
   {
     "reel": "v50-master2",
+    "variant": "-ar",
     "iso": "2026-08-23T15:30:00Z"
+  },
+  {
+    "reel": "v21-p30",
+    "variant": "-ar",
+    "iso": "2026-08-24T15:30:00Z"
+  },
+  {
+    "reel": "v22-p31",
+    "variant": "-en",
+    "iso": "2026-08-25T15:30:00Z"
+  },
+  {
+    "reel": "v23-p32",
+    "variant": "-ar",
+    "iso": "2026-08-26T15:30:00Z"
+  },
+  {
+    "reel": "v24-p33",
+    "variant": "-en",
+    "iso": "2026-08-27T15:30:00Z"
+  },
+  {
+    "reel": "v25-p34",
+    "variant": "-ar",
+    "iso": "2026-08-28T15:30:00Z"
+  },
+  {
+    "reel": "v26-p35",
+    "variant": "-en",
+    "iso": "2026-08-29T15:30:00Z"
+  },
+  {
+    "reel": "v27-p36",
+    "variant": "-ar",
+    "iso": "2026-08-30T15:30:00Z"
+  },
+  {
+    "reel": "v28-p37",
+    "variant": "-en",
+    "iso": "2026-08-31T15:30:00Z"
+  },
+  {
+    "reel": "v29-p38",
+    "variant": "-ar",
+    "iso": "2026-09-01T15:30:00Z"
+  },
+  {
+    "reel": "v30-p39",
+    "variant": "-en",
+    "iso": "2026-09-02T15:30:00Z"
+  },
+  {
+    "reel": "v31-p40",
+    "variant": "-ar",
+    "iso": "2026-09-03T15:30:00Z"
+  },
+  {
+    "reel": "v32-p41",
+    "variant": "-en",
+    "iso": "2026-09-04T15:30:00Z"
+  },
+  {
+    "reel": "v33-p42",
+    "variant": "-ar",
+    "iso": "2026-09-05T15:30:00Z"
+  },
+  {
+    "reel": "v34-p43",
+    "variant": "-en",
+    "iso": "2026-09-06T15:30:00Z"
+  },
+  {
+    "reel": "v35-p44",
+    "variant": "-ar",
+    "iso": "2026-09-07T15:30:00Z"
+  },
+  {
+    "reel": "v36-slowblink",
+    "variant": "-en",
+    "iso": "2026-09-08T15:30:00Z"
+  },
+  {
+    "reel": "v37-water",
+    "variant": "-ar",
+    "iso": "2026-09-09T15:30:00Z"
+  },
+  {
+    "reel": "v38-2am",
+    "variant": "-en",
+    "iso": "2026-09-10T15:30:00Z"
+  },
+  {
+    "reel": "v39-30sec",
+    "variant": "-ar",
+    "iso": "2026-09-11T15:30:00Z"
+  },
+  {
+    "reel": "v40-sincewhen",
+    "variant": "-en",
+    "iso": "2026-09-12T15:30:00Z"
+  },
+  {
+    "reel": "v41-lilies",
+    "variant": "-ar",
+    "iso": "2026-09-13T15:30:00Z"
+  },
+  {
+    "reel": "v42-quietdays",
+    "variant": "-en",
+    "iso": "2026-09-14T15:30:00Z"
+  },
+  {
+    "reel": "v43-notdiet",
+    "variant": "-ar",
+    "iso": "2026-09-15T15:30:00Z"
+  },
+  {
+    "reel": "v44-breath",
+    "variant": "-en",
+    "iso": "2026-09-16T15:30:00Z"
+  },
+  {
+    "reel": "v45-hands",
+    "variant": "-ar",
+    "iso": "2026-09-17T15:30:00Z"
+  },
+  {
+    "reel": "v46-indoor",
+    "variant": "-en",
+    "iso": "2026-09-18T15:30:00Z"
+  },
+  {
+    "reel": "v47-private",
+    "variant": "-ar",
+    "iso": "2026-09-19T15:30:00Z"
+  },
+  {
+    "reel": "v48-thirdeyelid",
+    "variant": "-en",
+    "iso": "2026-09-20T15:30:00Z"
+  },
+  {
+    "reel": "v49-overgrooming",
+    "variant": "-ar",
+    "iso": "2026-09-21T15:30:00Z"
+  },
+  {
+    "reel": "v50-master2",
+    "variant": "-en",
+    "iso": "2026-09-22T15:30:00Z"
   }
 ]

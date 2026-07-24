@@ -43,13 +43,13 @@ def _post(path, params):
 VARIANT = CFG.get("reelVariant", "")
 
 
-def video_url(reel): return f"{VIDEO_BASE}/{reel}{VARIANT}.mp4"
-def caption_for(reel): return retag(CAPS[reel], reel)
+def video_url(reel, variant): return f"{VIDEO_BASE}/{reel}{variant}.mp4"
+def caption_for(reel, variant): return retag(CAPS[reel], reel + variant)
 
 
-def publish_ig_reel(reel):
-    cont = _post(f"{IG}/media", {"media_type": "REELS", "video_url": video_url(reel),
-                                 "caption": caption_for(reel), "share_to_feed": "true"})
+def publish_ig_reel(reel, variant):
+    cont = _post(f"{IG}/media", {"media_type": "REELS", "video_url": video_url(reel, variant),
+                                 "caption": caption_for(reel, variant), "share_to_feed": "true"})
     if "id" not in cont:
         return False, f"IG container error {cont.get('_error')}"
     cid = cont["id"]
@@ -64,21 +64,21 @@ def publish_ig_reel(reel):
     return ("id" in pub), (pub.get("id") or f"IG publish error {str(pub.get('_error'))[:160]}")
 
 
-def publish_fb_reel(page_id, reel):
+def publish_fb_reel(page_id, reel, variant):
     start = _post(f"{page_id}/video_reels", {"upload_phase": "start"})
     vid = start.get("video_id"); up = start.get("upload_url")
     if not (vid and up):
         return False, f"FB start error {start.get('_error')}"
     req = urllib.request.Request(up, data=b"", method="POST",
                                  headers={"Authorization": f"OAuth {TOKEN}",
-                                          "file_url": video_url(reel)})
+                                          "file_url": video_url(reel, variant)})
     try:
         urllib.request.urlopen(req, timeout=180).read()
     except urllib.error.HTTPError as e:
         return False, f"FB upload error {e.read()[:160].decode(errors='replace')}"
     fin = _post(f"{page_id}/video_reels", {"upload_phase": "finish", "video_id": vid,
                                            "video_state": "PUBLISHED",
-                                           "description": caption_for(reel)})
+                                           "description": caption_for(reel, variant)})
     if not (fin.get("success") or fin.get("post_id") or fin.get("id")):
         return False, f"FB finish error {fin.get('_error')}"
     # "success" only means the finish call was accepted. FB transcodes and policy
@@ -102,19 +102,27 @@ def main():
     state = json.load(open("posted_reels.json")) if os.path.exists("posted_reels.json") else {}
     now = datetime.datetime.now(datetime.timezone.utc)
     page_id = _get("me").get("id")
+    # Each entry may carry its own language variant, so the schedule can alternate
+    # EN and AR from one file. State is keyed reel+variant, otherwise the two
+    # language cuts of a reel would collide and only one would ever publish.
+    for r in reels:
+        r.setdefault("variant", VARIANT)
     due = [r for r in reels
            if datetime.datetime.fromisoformat(r["iso"].replace("Z", "+00:00")) <= now
-           and not (state.get(r["reel"], {}).get("ig") and state.get(r["reel"], {}).get("fb"))]
+           and not (state.get(r["reel"] + r["variant"], {}).get("ig")
+                    and state.get(r["reel"] + r["variant"], {}).get("fb"))]
     if not due:
         print(f"[{stamp}] no reels due"); return
     for r in due:
-        reel = r["reel"]; st = state.setdefault(reel, {"ig": False, "fb": False})
+        reel, variant = r["reel"], r["variant"]
+        key = reel + variant
+        st = state.setdefault(key, {"ig": False, "fb": False})
         if not st["ig"]:
-            ok, info = publish_ig_reel(reel); st["ig"] = info if ok else False
-            print(f"[{stamp}] IG reel {reel}: {'published '+info if ok else info}")
+            ok, info = publish_ig_reel(reel, variant); st["ig"] = info if ok else False
+            print(f"[{stamp}] IG reel {key}: {'published '+info if ok else info}")
         if not st["fb"]:
-            ok, info = publish_fb_reel(page_id, reel); st["fb"] = info if ok else False
-            print(f"[{stamp}] FB reel {reel}: {'published '+info if ok else info}")
+            ok, info = publish_fb_reel(page_id, reel, variant); st["fb"] = info if ok else False
+            print(f"[{stamp}] FB reel {key}: {'published '+info if ok else info}")
     json.dump(state, open("posted_reels.json", "w"), ensure_ascii=False, indent=2)
 
 

@@ -1,0 +1,33 @@
+name: Hirra insights collect
+
+# Daily performance snapshot at 03:00 UTC (09:00 Bangladesh / 06:00 Saudi), a few
+# hours after the day's reel has published and settled. Appends a row per post
+# per day to metrics.csv so performance is a trend, not a one-off manual audit.
+#
+# The metric that matters is ig_reels_avg_watch_time. The 4:5 cuts averaged ~1s
+# on a 16s reel. If the 9:16 rebuild moved it, that is where it shows.
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Collect insights
+        env:
+          META_PAGE_TOKEN: ${{ secrets.META_PAGE_TOKEN }}
+        run: python3 collect_insights.py
+      - name: Commit metrics
+        run: |
+          git config user.name "hirra-bot"
+          git config user.email "hirra-bot@users.noreply.github.com"
+          git pull --rebase origin main || true
+          git add metrics.csv
+          git diff --staged --quiet || git commit -m "metrics: daily insights snapshot [skip ci]"
+          git push
