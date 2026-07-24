@@ -15,6 +15,14 @@ Reads:  posted_reels.json, posted_statics.json, posted.json
 Writes: metrics.csv (append-only, one row per post per collection day)
 Secret: META_PAGE_TOKEN (env)
 
+TOKEN SCOPES. The publishing token is not enough. As of 2026-07-24 every insight
+call returns "(#10) Application does not have permission for this action",
+because META_PAGE_TOKEN was issued for publishing only. Re-issue it with these
+added, and the collector starts working with no code change:
+
+    read_insights                 Facebook Page post insights
+    instagram_manage_insights     Instagram media insights
+
 Usage: python3 collect_insights.py
 """
 import csv
@@ -128,6 +136,13 @@ def main():
         print(f"  {len(_errs)} API errors, first few:")
         for e in _errs[:6]:
             print("   ", e)
+        if any("does not have permission" in e for e in _errs):
+            print("  -> META_PAGE_TOKEN is missing read_insights and/or "
+                  "instagram_manage_insights. Re-issue it with those scopes.")
+    if not rows:
+        # Exit non-zero so the workflow goes red. A green run that collected
+        # nothing is worse than no watcher at all.
+        raise SystemExit("collected nothing: see the errors above")
     if watch:
         vals = [r[6] for r in watch if isinstance(r[6], (int, float))]
         if vals:
