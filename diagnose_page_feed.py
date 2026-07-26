@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Read-only diagnostic, pass 5.
+Read-only diagnostic for the Hirra Page.
 
 Confirmed by the founder: a logged-in non-admin sees FOUR stories on the Page.
 Admin sees 64. Logged out sees ~1. That gradient tracks relationship to the
@@ -71,9 +71,8 @@ def main():
     print("=" * 70)
     fields = ("id,created_time,status_type,permalink_url,"
               "application{id,name,link,namespace},"
-              "is_eligible_for_promotion,promotable_id,"
               "privacy,is_hidden,is_published,"
-              "targeting,feed_targeting,allowed_advertising_objectives")
+              "targeting,feed_targeting")
     rows, page = [], 0
     data = _get("me/feed", {"fields": fields, "limit": 50})
     while True:
