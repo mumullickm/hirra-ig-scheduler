@@ -1,20 +1,24 @@
 #!/usr/bin/env python3
 """
-Read-only diagnostic, pass 2.
+Read-only diagnostic, pass 3.
 
-Pass 1 established the timeline is clean: 25 posts, all EVERYONE, none hidden,
-feed == published_posts. So the gap is not permissions.
+Pass 1: timeline is clean. 25+ posts, all EVERYONE, none hidden.
+Pass 2: 67 feed stories = 47 added_photos + 20 added_video. /me/albums reports
+        only Cover photos and Profile pictures, and the oldest photo story
+        carries ?substory_index=... which is Facebook's marker for a story that
+        is one slice of an aggregated parent story.
 
-The remaining anomaly is the permalink actor. Photo posts resolve to
-facebook.com/122109204921394425/posts/... while the Page is 1225532260636387.
-Reels resolve to facebook.com/reel/<id>. If the photo posts are attributed to a
-different profile object than the one a visitor lands on, that alone explains a
-visitor seeing only the handful of stories that ARE attributed to the Page.
+Hypothesis under test: every photo lands in one implicit uploads album, so
+Facebook collapses them into a small number of "added N new photos" parent
+stories. A visitor scrolling the Page sees those few parents, not 47 posts, and
+a newly published photo is folded into an existing parent instead of appearing
+as a new story. Reels sit on a separate tab and never enter the Posts list.
 
-Also counts posts by type and by resolved actor. Writes nothing.
+Checks: story text, parent_id, subattachment counts and album per photo post.
+Writes nothing.
 """
 import json, os, urllib.parse, urllib.request
-from collections import Counter
+from collections import Counter, defaultdict
 
 GRAPH = "https://graph.facebook.com/v21.0"
 TOKEN = os.environ["META_PAGE_TOKEN"]
@@ -28,71 +32,67 @@ def _get(path, params=None):
         return json.loads(r.read().decode())
 
 
-def try_get(label, path, params=None):
-    print(f"\n--- {label}  ({path}) ---")
-    try:
-        d = _get(path, params)
-        print(json.dumps(d, indent=2, ensure_ascii=False)[:2500])
-        return d
-    except Exception as e:
-        body = e.read().decode()[:500] if hasattr(e, "read") else ""
-        print(f"  ERROR {e} {body}")
-        return None
-
-
 def main():
-    # 1. What is the mystery actor in the photo permalinks?
-    try_get("mystery actor", "122109204921394425",
-            {"fields": "id,name,link,category,username"})
-
-    # 2. What does the Page think its own profile / username is?
-    try_get("page identity", "me",
-            {"fields": "id,name,username,link,category,about,"
-                       "has_transitioned_to_new_page_experience,"
-                       "new_like_count,fan_count,followers_count,"
-                       "is_published,is_webhooks_subscribed,talking_about_count"})
-
-    # 3. Walk the FULL feed, not just page 1, and bucket it.
-    print(f"\n{'='*70}\nFULL FEED WALK\n{'='*70}")
-    fields = "id,created_time,status_type,permalink_url,is_hidden,is_published"
-    rows, url_params, page = [], {"fields": fields, "limit": 100}, 0
-    data = _get("me/feed", url_params)
+    fields = ("id,created_time,status_type,permalink_url,story,parent_id,"
+              "attachments{type,title,url,subattachments}")
+    rows, page = [], 0
+    data = _get("me/feed", {"fields": fields, "limit": 50})
     while True:
         rows.extend(data.get("data", []))
         page += 1
         nxt = (data.get("paging") or {}).get("next")
-        if not nxt or page > 10:
+        if not nxt or page > 6:
             break
         with urllib.request.urlopen(nxt, timeout=60) as r:
             data = json.loads(r.read().decode())
 
-    print(f"  total feed stories: {len(rows)}")
-    print(f"  by status_type: {Counter(r.get('status_type') for r in rows)}")
+    photos = [r for r in rows if r.get("status_type") == "added_photos"]
+    print(f"total stories {len(rows)}  photo stories {len(photos)}")
 
-    actors = Counter()
-    for r in rows:
+    print(f"\n{'='*70}\nAGGREGATION CHECK: photo stories\n{'='*70}")
+    substory = 0
+    subcounts = Counter()
+    for r in photos[:20]:
+        att = ((r.get("attachments") or {}).get("data") or [{}])[0]
+        subs = ((att.get("subattachments") or {}).get("data") or [])
         pl = r.get("permalink_url") or ""
-        seg = pl.replace("https://www.facebook.com/", "").split("/")
-        actors[seg[0] if seg else "?"] += 1
-    print(f"  by permalink actor: {dict(actors)}")
+        has_sub = "substory_index" in pl
+        substory += has_sub
+        subcounts[len(subs)] += 1
+        print(f"\n  {r.get('created_time')}  {r.get('id')}")
+        print(f"    story         {(r.get('story') or '(none)')[:90]}")
+        print(f"    parent_id     {r.get('parent_id')}")
+        print(f"    att type      {att.get('type')}  title={str(att.get('title'))[:50]!r}")
+        print(f"    subattach     {len(subs)}")
+        print(f"    substory_idx  {has_sub}")
 
-    print(f"\n  oldest story: {rows[-1].get('created_time')}  {rows[-1].get('permalink_url')}")
-    print(f"  newest story: {rows[0].get('created_time')}  {rows[0].get('permalink_url')}")
+    for r in photos[20:]:
+        att = ((r.get("attachments") or {}).get("data") or [{}])[0]
+        subs = ((att.get("subattachments") or {}).get("data") or [])
+        subcounts[len(subs)] += 1
+        substory += "substory_index" in (r.get("permalink_url") or "")
 
-    # 4. The visitor-facing surfaces the mobile app actually renders.
-    for label, edge in [("posts edge", "me/posts"),
-                        ("photos uploaded", "me/photos/uploaded"),
-                        ("albums", "me/albums"),
-                        ("video reels", "me/video_reels")]:
-        try:
-            d = _get(edge, {"fields": "id,name,count,created_time", "limit": 100})
-            n = len(d.get("data", []))
-            print(f"\n  {label:18s} -> {n} items")
-            if edge == "me/albums":
-                for a in d.get("data", []):
-                    print(f"      album {a.get('id')} {a.get('name')!r} count={a.get('count')}")
-        except Exception as e:
-            print(f"\n  {label:18s} -> ERROR {e}")
+    print(f"\n  photo stories carrying substory_index : {substory}/{len(photos)}")
+    print(f"  subattachment count distribution      : {dict(subcounts)}")
+
+    # Which album does each uploaded photo belong to? If they all share one
+    # album, that is the aggregation bucket.
+    print(f"\n{'='*70}\nALBUM OF EACH UPLOADED PHOTO\n{'='*70}")
+    ph = _get("me/photos/uploaded", {"fields": "id,created_time,album{id,name,count}", "limit": 100})
+    albums = Counter()
+    for p in ph.get("data", []):
+        a = p.get("album") or {}
+        albums[f"{a.get('id')} {a.get('name')!r} count={a.get('count')}"] += 1
+    print(f"  uploaded photos: {len(ph.get('data', []))}")
+    for k, v in albums.items():
+        print(f"    {v:3d} photos in album {k}")
+
+    # Reels are a separate surface. Confirm how many and that they are not in
+    # the same bucket as the photo stories.
+    vids = [r for r in rows if r.get("status_type") == "added_video"]
+    print(f"\n  video/reel stories: {len(vids)}")
+    print(f"  reel permalinks all /reel/ form: "
+          f"{all('/reel/' in (v.get('permalink_url') or '') for v in vids)}")
 
 
 if __name__ == "__main__":
