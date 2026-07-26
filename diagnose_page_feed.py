@@ -1,24 +1,20 @@
 #!/usr/bin/env python3
 """
-Read-only diagnostic, pass 3.
+Read-only diagnostic, pass 4.
 
-Pass 1: timeline is clean. 25+ posts, all EVERYONE, none hidden.
-Pass 2: 67 feed stories = 47 added_photos + 20 added_video. /me/albums reports
-        only Cover photos and Profile pictures, and the oldest photo story
-        carries ?substory_index=... which is Facebook's marker for a story that
-        is one slice of an aggregated parent story.
+Passes 1 to 3 ruled out every visibility explanation:
+  - all 64 stories are is_published true, is_hidden false, privacy EVERYONE
+  - feed == published_posts, so nothing is filtered out of the visitor timeline
+  - no aggregation: 44 photo stories are standalone, 0 subattachments, no parent
+  - no page-level age, country or publish restriction
 
-Hypothesis under test: every photo lands in one implicit uploads album, so
-Facebook collapses them into a small number of "added N new photos" parent
-stories. A visitor scrolling the Page sees those few parents, not 47 posts, and
-a newly published photo is folded into an existing parent instead of appearing
-as a new story. Reels sit on a separate tab and never enter the Posts list.
+So the Page is not hiding anything. What is left is delivery: Facebook is
+choosing not to put these posts in front of the 17 followers. This pass pulls
+per-post reach to confirm that, and checks follower vs fan split.
 
-Checks: story text, parent_id, subattachment counts and album per photo post.
 Writes nothing.
 """
 import json, os, urllib.parse, urllib.request
-from collections import Counter, defaultdict
 
 GRAPH = "https://graph.facebook.com/v21.0"
 TOKEN = os.environ["META_PAGE_TOKEN"]
@@ -32,67 +28,55 @@ def _get(path, params=None):
         return json.loads(r.read().decode())
 
 
+def err(e):
+    if hasattr(e, "read"):
+        try:
+            return json.loads(e.read().decode())["error"]["message"][:300]
+        except Exception:
+            return str(e)
+    return str(e)
+
+
 def main():
-    fields = ("id,created_time,status_type,permalink_url,story,parent_id,"
-              "attachments{type,title,url,subattachments}")
-    rows, page = [], 0
-    data = _get("me/feed", {"fields": fields, "limit": 50})
-    while True:
-        rows.extend(data.get("data", []))
-        page += 1
-        nxt = (data.get("paging") or {}).get("next")
-        if not nxt or page > 6:
-            break
-        with urllib.request.urlopen(nxt, timeout=60) as r:
-            data = json.loads(r.read().decode())
+    print("FOLLOWERS VS FANS")
+    try:
+        d = _get("me", {"fields": "fan_count,followers_count,talking_about_count,"
+                                  "were_here_count,rating_count"})
+        print(json.dumps(d, indent=2))
+    except Exception as e:
+        print(f"  ERROR {err(e)}")
 
-    photos = [r for r in rows if r.get("status_type") == "added_photos"]
-    print(f"total stories {len(rows)}  photo stories {len(photos)}")
+    print("\nRECENT POSTS + REACH")
+    posts = _get("me/feed", {"fields": "id,created_time,status_type,permalink_url",
+                             "limit": 12}).get("data", [])
+    for p in posts:
+        pid = p["id"]
+        line = f"\n  {p['created_time']}  {p['status_type']:14s} {pid}"
+        print(line)
+        for metric in ("post_impressions_unique", "post_impressions",
+                       "post_impressions_fan_unique", "post_engaged_users"):
+            try:
+                ins = _get(f"{pid}/insights", {"metric": metric})
+                vals = ins.get("data", [])
+                v = vals[0]["values"][0]["value"] if vals else "(empty)"
+                print(f"      {metric:30s} {v}")
+            except Exception as e:
+                print(f"      {metric:30s} ERROR {err(e)}")
+                break
 
-    print(f"\n{'='*70}\nAGGREGATION CHECK: photo stories\n{'='*70}")
-    substory = 0
-    subcounts = Counter()
-    for r in photos[:20]:
-        att = ((r.get("attachments") or {}).get("data") or [{}])[0]
-        subs = ((att.get("subattachments") or {}).get("data") or [])
-        pl = r.get("permalink_url") or ""
-        has_sub = "substory_index" in pl
-        substory += has_sub
-        subcounts[len(subs)] += 1
-        print(f"\n  {r.get('created_time')}  {r.get('id')}")
-        print(f"    story         {(r.get('story') or '(none)')[:90]}")
-        print(f"    parent_id     {r.get('parent_id')}")
-        print(f"    att type      {att.get('type')}  title={str(att.get('title'))[:50]!r}")
-        print(f"    subattach     {len(subs)}")
-        print(f"    substory_idx  {has_sub}")
-
-    for r in photos[20:]:
-        att = ((r.get("attachments") or {}).get("data") or [{}])[0]
-        subs = ((att.get("subattachments") or {}).get("data") or [])
-        subcounts[len(subs)] += 1
-        substory += "substory_index" in (r.get("permalink_url") or "")
-
-    print(f"\n  photo stories carrying substory_index : {substory}/{len(photos)}")
-    print(f"  subattachment count distribution      : {dict(subcounts)}")
-
-    # Which album does each uploaded photo belong to? If they all share one
-    # album, that is the aggregation bucket.
-    print(f"\n{'='*70}\nALBUM OF EACH UPLOADED PHOTO\n{'='*70}")
-    ph = _get("me/photos/uploaded", {"fields": "id,created_time,album{id,name,count}", "limit": 100})
-    albums = Counter()
-    for p in ph.get("data", []):
-        a = p.get("album") or {}
-        albums[f"{a.get('id')} {a.get('name')!r} count={a.get('count')}"] += 1
-    print(f"  uploaded photos: {len(ph.get('data', []))}")
-    for k, v in albums.items():
-        print(f"    {v:3d} photos in album {k}")
-
-    # Reels are a separate surface. Confirm how many and that they are not in
-    # the same bucket as the photo stories.
-    vids = [r for r in rows if r.get("status_type") == "added_video"]
-    print(f"\n  video/reel stories: {len(vids)}")
-    print(f"  reel permalinks all /reel/ form: "
-          f"{all('/reel/' in (v.get('permalink_url') or '') for v in vids)}")
+    print("\nPAGE-LEVEL REACH, last 28 days")
+    for metric in ("page_impressions_unique", "page_posts_impressions_unique",
+                   "page_fans", "page_follows"):
+        try:
+            d = _get("me/insights", {"metric": metric, "period": "day"})
+            rows = d.get("data", [])
+            if not rows:
+                print(f"  {metric:32s} (empty)")
+                continue
+            vals = rows[0].get("values", [])[-5:]
+            print(f"  {metric:32s} {[(v.get('end_time','')[:10], v.get('value')) for v in vals]}")
+        except Exception as e:
+            print(f"  {metric:32s} ERROR {err(e)}")
 
 
 if __name__ == "__main__":
