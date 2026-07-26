@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 """
-Read-only diagnostic: what does the Hirra Page timeline actually contain?
+Read-only diagnostic, pass 2.
 
-Answers one question. Posts are confirmed public by permalink, yet a visitor on
-the Facebook mobile app sees only a handful of stories on the Page. Public by
-permalink and present on the timeline are two different things. A post can be
-`privacy: EVERYONE` and still be absent from the Page feed if it is hidden from
-the timeline, unpublished, or restricted by country or age.
+Pass 1 established the timeline is clean: 25 posts, all EVERYONE, none hidden,
+feed == published_posts. So the gap is not permissions.
 
-Prints, per post: id, created_time, is_published, is_hidden, is_expired,
-privacy, targeting restrictions, and permalink. Writes nothing, changes nothing.
+The remaining anomaly is the permalink actor. Photo posts resolve to
+facebook.com/122109204921394425/posts/... while the Page is 1225532260636387.
+Reels resolve to facebook.com/reel/<id>. If the photo posts are attributed to a
+different profile object than the one a visitor lands on, that alone explains a
+visitor seeing only the handful of stories that ARE attributed to the Page.
+
+Also counts posts by type and by resolved actor. Writes nothing.
 """
 import json, os, urllib.parse, urllib.request
+from collections import Counter
 
 GRAPH = "https://graph.facebook.com/v21.0"
 TOKEN = os.environ["META_PAGE_TOKEN"]
@@ -25,74 +28,71 @@ def _get(path, params=None):
         return json.loads(r.read().decode())
 
 
-def dump(label, edge, fields, limit=25):
-    print(f"\n{'='*70}\n{label}  (GET /me/{edge})\n{'='*70}")
+def try_get(label, path, params=None):
+    print(f"\n--- {label}  ({path}) ---")
     try:
-        data = _get(f"me/{edge}", {"fields": fields, "limit": limit})
+        d = _get(path, params)
+        print(json.dumps(d, indent=2, ensure_ascii=False)[:2500])
+        return d
     except Exception as e:
-        body = ""
-        if hasattr(e, "read"):
-            body = e.read().decode()[:600]
-        print(f"  ERROR: {e} {body}")
-        return []
-    rows = data.get("data", [])
-    print(f"  count returned: {len(rows)}")
-    for p in rows:
-        print(f"\n  id           {p.get('id')}")
-        print(f"  created      {p.get('created_time')}")
-        print(f"  is_published {p.get('is_published')}")
-        print(f"  is_hidden    {p.get('is_hidden')}")
-        print(f"  is_expired   {p.get('is_expired')}")
-        print(f"  status_type  {p.get('status_type')}")
-        priv = p.get("privacy") or {}
-        print(f"  privacy      value={priv.get('value')!r} desc={priv.get('description')!r} "
-              f"allow={priv.get('allow')!r} deny={priv.get('deny')!r}")
-        if p.get("targeting"):
-            print(f"  targeting    {json.dumps(p['targeting'])}")
-        if p.get("feed_targeting"):
-            print(f"  feed_target  {json.dumps(p['feed_targeting'])}")
-        print(f"  permalink    {p.get('permalink_url')}")
-        msg = (p.get("message") or "").replace("\n", " ")[:70]
-        print(f"  message      {msg}")
-    return rows
+        body = e.read().decode()[:500] if hasattr(e, "read") else ""
+        print(f"  ERROR {e} {body}")
+        return None
 
 
 def main():
-    me = _get("me", {"fields": "id,name,is_published,link,"
-                               "country_page_likes,is_permanently_closed,"
-                               "verification_status,fan_count,followers_count"})
-    print("PAGE")
-    print(json.dumps(me, indent=2, ensure_ascii=False))
+    # 1. What is the mystery actor in the photo permalinks?
+    try_get("mystery actor", "122109204921394425",
+            {"fields": "id,name,link,category,username"})
 
-    # Page-level gates that hide every story from a given viewer.
-    for edge, fields in [
-        ("restrictions", "age,alcohol,country,type"),
-        ("settings", "setting,value"),
-    ]:
+    # 2. What does the Page think its own profile / username is?
+    try_get("page identity", "me",
+            {"fields": "id,name,username,link,category,about,"
+                       "has_transitioned_to_new_page_experience,"
+                       "new_like_count,fan_count,followers_count,"
+                       "is_published,is_webhooks_subscribed,talking_about_count"})
+
+    # 3. Walk the FULL feed, not just page 1, and bucket it.
+    print(f"\n{'='*70}\nFULL FEED WALK\n{'='*70}")
+    fields = "id,created_time,status_type,permalink_url,is_hidden,is_published"
+    rows, url_params, page = [], {"fields": fields, "limit": 100}, 0
+    data = _get("me/feed", url_params)
+    while True:
+        rows.extend(data.get("data", []))
+        page += 1
+        nxt = (data.get("paging") or {}).get("next")
+        if not nxt or page > 10:
+            break
+        with urllib.request.urlopen(nxt, timeout=60) as r:
+            data = json.loads(r.read().decode())
+
+    print(f"  total feed stories: {len(rows)}")
+    print(f"  by status_type: {Counter(r.get('status_type') for r in rows)}")
+
+    actors = Counter()
+    for r in rows:
+        pl = r.get("permalink_url") or ""
+        seg = pl.replace("https://www.facebook.com/", "").split("/")
+        actors[seg[0] if seg else "?"] += 1
+    print(f"  by permalink actor: {dict(actors)}")
+
+    print(f"\n  oldest story: {rows[-1].get('created_time')}  {rows[-1].get('permalink_url')}")
+    print(f"  newest story: {rows[0].get('created_time')}  {rows[0].get('permalink_url')}")
+
+    # 4. The visitor-facing surfaces the mobile app actually renders.
+    for label, edge in [("posts edge", "me/posts"),
+                        ("photos uploaded", "me/photos/uploaded"),
+                        ("albums", "me/albums"),
+                        ("video reels", "me/video_reels")]:
         try:
-            print(f"\n--- /me/{edge} ---")
-            print(json.dumps(_get(f"me/{edge}", {"fields": fields}), indent=2)[:3000])
+            d = _get(edge, {"fields": "id,name,count,created_time", "limit": 100})
+            n = len(d.get("data", []))
+            print(f"\n  {label:18s} -> {n} items")
+            if edge == "me/albums":
+                for a in d.get("data", []):
+                    print(f"      album {a.get('id')} {a.get('name')!r} count={a.get('count')}")
         except Exception as e:
-            print(f"  (unavailable: {e})")
-
-    fields = ("id,created_time,is_published,is_hidden,is_expired,status_type,"
-              "permalink_url,message,privacy,targeting,feed_targeting")
-
-    # published_posts = what the admin sees. feed = what a visitor's Page feed is
-    # built from. A gap between these two is the bug.
-    pub = dump("PUBLISHED POSTS (admin view)", "published_posts", fields)
-    feed = dump("FEED (visitor-facing timeline)", "feed", fields)
-
-    print(f"\n{'='*70}\nSUMMARY\n{'='*70}")
-    print(f"  published_posts returned : {len(pub)}")
-    print(f"  feed returned            : {len(feed)}")
-    hidden = [p['id'] for p in pub if p.get('is_hidden')]
-    unpub = [p['id'] for p in pub if p.get('is_published') is False]
-    nonpublic = [(p['id'], (p.get('privacy') or {}).get('value'))
-                 for p in pub if (p.get('privacy') or {}).get('value') not in ("EVERYONE", "", None)]
-    print(f"  hidden from timeline     : {len(hidden)} {hidden[:10]}")
-    print(f"  is_published false       : {len(unpub)} {unpub[:10]}")
-    print(f"  privacy not EVERYONE     : {len(nonpublic)} {nonpublic[:10]}")
+            print(f"\n  {label:18s} -> ERROR {e}")
 
 
 if __name__ == "__main__":
